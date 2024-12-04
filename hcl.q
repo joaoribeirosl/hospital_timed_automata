@@ -4,14 +4,14 @@
 
 */
 E<> sector_icu.generating_ticket\
-\
+\*
 
 
 /*
 
 */
 E<> sector_icu.send_ticket\
-\
+\*
 
 
 /*
