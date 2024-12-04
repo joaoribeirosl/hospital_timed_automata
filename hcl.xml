@@ -1,0 +1,753 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.6//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_6.dtd'>
+<nta>
+	<declaration>// --- Channels ---
+
+broadcast chan robot_assign_task;
+broadcast chan kit_ready_to_validate;
+broadcast chan kit_ready;
+broadcast chan robot_deliver_icu_done;
+broadcast chan robot_deliver_emergency_done;
+broadcast chan robot_deliver_pediatrics_done;
+broadcast chan sending_kits;
+broadcast chan kit_received;
+broadcast chan receive_to_idle;
+broadcast chan station_to_idle;
+broadcast chan validate_to_idle;
+broadcast chan generate_ticket;
+broadcast chan robot_back_to_work;
+broadcast chan robot_disobey;
+
+
+// --- Variables ---
+
+clock elapsed_time;
+const int humans = 3;                     // human quantity that are waiting to receive kits on each sector         
+const int obey_rate[2] = {95,5};          // robot has 95% chance to obey and 5% chance to desobey
+const int empty = 0;                             
+const int icu = 0;
+const int emergency = 1;
+const int pediatrics = 2;
+int current_sector;
+int kit_map[3] = {2,2,3};                  // kits to mount in each sector [0] icu, [1] emergency, [2] pediatrics.
+int delivery_priority = 0;                 // each sector has his own priority e.g. 0. icu, 1. emergency, 2. pediatrics
+
+int ticket_queue[3] = {-1,-1,-1};          //  initialize ticket_queue with values different than zero
+int delivery_ticket_queue[3] = {-1,-1,-1}; // queue used to deliver tickets on each sector
+int remaining_kits_per_sector[3] = {0,0,0};// list to store remaining tickets from each sector
+int total_tickets_in_queue;                // sum of all kits to be mounted
+int num_tickets = 0;                       // number of kits in dispenser
+int max_num_tickets = 5;                   // maximum number of kits in dispenser, must be 18
+int ticket_count = 0;                      // index for tickets mounted in each sector
+int kits_to_mount;                         // kits to mount for each sector
+int max_kits_per_travel = 5;               // maximum number of kits that robot deliver can carry
+int kits_delivered_in_travel = 0;          // index for kits under delivery process
+
+
+const int time_to_mount_kit = 5; 
+const int time_to_validate_kit = 10;
+const int time_to_deliver_kit = 5;
+const int time_to_receive_kit = 2;
+const int time_to_generate_ticket = 3;
+const int time_to_send_ticket = 2;
+const int time_to_generate_path = 3;
+const int time_to_return = 10;
+
+
+bool success[humans] = {false, false, false}; // check if robot delivery on each sector
+bool served[humans] = {false, false, false}; // check if humans received kits correctly
+bool arm_ready = true;                      // indicates when robot can mount a kit
+bool generated_icu_kits = false;
+bool generated_emergency_kits = false;
+bool generated_pediatrics_kits = false;
+
+
+
+
+
+
+
+
+
+
+
+
+
+</declaration>
+	<template>
+		<name x="5" y="5">Robot_Assembler</name>
+		<declaration>// Place local declarations here.
+clock elapsed_time;
+
+bool is_ticket_queue_empty() {
+    // check if ticket_queue is empty
+    return ticket_queue[icu] == empty &amp;&amp; ticket_queue[emergency] == empty &amp;&amp; ticket_queue[pediatrics] == empty;
+}
+
+void set_remaining_sector(){
+    // check which sector has pending kits
+    int i;
+    for(i = 0; i &lt; humans; i++){
+        if(ticket_queue[i] &gt; empty){
+            current_sector = i;
+            return;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+</declaration>
+		<location id="id0" x="-637" y="-221">
+			<name x="-680" y="-255">idle</name>
+		</location>
+		<location id="id1" x="-348" y="-221">
+			<name x="-331" y="-204">working</name>
+		</location>
+		<location id="id2" x="-637" y="-42">
+			<name x="-671" y="-76">complete</name>
+		</location>
+		<location id="id3" x="-340" y="-527">
+			<name x="-357" y="-569">prepare_kit</name>
+		</location>
+		<location id="id4" x="331" y="-212">
+			<name x="348" y="-221">finish_kit</name>
+		</location>
+		<location id="id5" x="340" y="-408">
+			<name x="289" y="-442">full_dispenser</name>
+		</location>
+		<location id="id6" x="459" y="-161">
+			<name x="476" y="-170">wait_next_batch</name>
+		</location>
+		<location id="id7" x="-586" y="-314">
+			<name x="-646" y="-348">decision</name>
+			<committed/>
+		</location>
+		<location id="id8" x="-790" y="-493">
+			<name x="-816" y="-527">disobey</name>
+		</location>
+		<branchpoint id="id9" x="-552" y="-365"/>
+		<init ref="id0"/>
+		<transition id="id10">
+			<source ref="id6"/>
+			<target ref="id0"/>
+			<label kind="synchronisation" x="-152" y="42">station_to_idle?</label>
+			<label kind="assignment" x="-169" y="76">set_remaining_sector(),
+total_tickets_in_queue = 0,
+num_tickets = 0,
+arm_ready = true,
+elapsed_time = 0</label>
+			<nail x="459" y="59"/>
+			<nail x="-382" y="67"/>
+		</transition>
+		<transition id="id11">
+			<source ref="id8"/>
+			<target ref="id0"/>
+			<label kind="assignment" x="-850" y="-391">elapsed_time = 0</label>
+			<nail x="-790" y="-221"/>
+		</transition>
+		<transition id="id12" controllable="false">
+			<source ref="id7"/>
+			<target ref="id9"/>
+		</transition>
+		<transition id="id13">
+			<source ref="id0"/>
+			<target ref="id7"/>
+			<label kind="synchronisation" x="-620" y="-280">robot_assign_task?</label>
+			<label kind="assignment" x="-620" y="-263">arm_ready = false</label>
+		</transition>
+		<transition id="id14">
+			<source ref="id9"/>
+			<target ref="id8"/>
+			<label kind="synchronisation" x="-688" y="-442">robot_disobey!</label>
+			<label kind="probability" x="-680" y="-425">obey_rate[1]</label>
+		</transition>
+		<transition id="id15">
+			<source ref="id9"/>
+			<target ref="id1"/>
+			<label kind="probability" x="-518" y="-314">obey_rate[0]</label>
+		</transition>
+		<transition id="id16">
+			<source ref="id5"/>
+			<target ref="id6"/>
+			<label kind="synchronisation" x="408" y="-340">kit_ready_to_validate!</label>
+			<label kind="assignment" x="408" y="-323">num_tickets -= ticket_count,
+delivery_ticket_queue[current_sector] = ticket_count,
+ticket_queue[current_sector] -= ticket_count,
+remaining_kits_per_sector[current_sector] = ticket_queue[current_sector],
+ticket_count = 0</label>
+			<nail x="459" y="-407"/>
+			<nail x="459" y="-314"/>
+		</transition>
+		<transition id="id17">
+			<source ref="id1"/>
+			<target ref="id3"/>
+			<label kind="guard" x="-306" y="-459">ticket_count &lt; 
+ticket_queue[current_sector] &amp;&amp; 
+num_tickets &lt; 
+max_num_tickets</label>
+			<nail x="-238" y="-374"/>
+		</transition>
+		<transition id="id18">
+			<source ref="id1"/>
+			<target ref="id5"/>
+			<label kind="guard" x="68" y="-382">num_tickets == max_num_tickets &amp;&amp;
+num_tickets &lt; total_tickets_in_queue</label>
+		</transition>
+		<transition id="id19">
+			<source ref="id4"/>
+			<target ref="id0"/>
+			<label kind="guard" x="-289" y="-153">num_tickets &lt; max_num_tickets</label>
+			<label kind="synchronisation" x="-238" y="-170">generate_ticket?</label>
+			<nail x="-187" y="-110"/>
+		</transition>
+		<transition id="id20">
+			<source ref="id4"/>
+			<target ref="id2"/>
+			<label kind="guard" x="-195" y="-68">is_ticket_queue_empty()</label>
+			<label kind="synchronisation" x="-187" y="-85">kit_ready_to_validate!</label>
+			<nail x="331" y="-42"/>
+		</transition>
+		<transition id="id21">
+			<source ref="id1"/>
+			<target ref="id4"/>
+			<label kind="guard" x="-76" y="-306">elapsed_time &gt;= time_to_mount_kit &amp;&amp; 
+ticket_count == ticket_queue[current_sector]</label>
+			<label kind="assignment" x="-76" y="-272">delivery_ticket_queue[current_sector] = ticket_count,
+ticket_queue[current_sector] -= ticket_count,
+ticket_count = 0,
+arm_ready = true</label>
+		</transition>
+		<transition id="id22">
+			<source ref="id3"/>
+			<target ref="id1"/>
+			<label kind="assignment" x="-476" y="-450">ticket_count ++,
+num_tickets ++,
+elapsed_time = 0</label>
+			<nail x="-450" y="-374"/>
+		</transition>
+		<transition id="id23">
+			<source ref="id2"/>
+			<target ref="id0"/>
+			<label kind="assignment" x="-782" y="-179">num_tickets = 0,
+elapsed_time = 0</label>
+			<nail x="-637" y="-51"/>
+		</transition>
+	</template>
+	<template>
+		<name>Human_Receiver</name>
+		<parameter>int id, int sector_type</parameter>
+		<declaration>// Place local declarations here.
+clock elapsed_time;
+</declaration>
+		<location id="id24" x="-433" y="-76">
+			<name x="-476" y="-110">idle</name>
+		</location>
+		<location id="id25" x="119" y="-76">
+			<name x="136" y="-76">receiving_pediatrics</name>
+		</location>
+		<location id="id26" x="119" y="136">
+			<name x="144" y="153">complete</name>
+		</location>
+		<location id="id27" x="-306" y="-467">
+			<name x="-323" y="-510">icu_waiting</name>
+		</location>
+		<location id="id28" x="238" y="-306">
+			<name x="178" y="-348">receiving_emergency</name>
+		</location>
+		<location id="id29" x="357" y="-467">
+			<name x="314" y="-510">receiving_icu</name>
+		</location>
+		<location id="id30" x="-170" y="-306">
+			<name x="-238" y="-340">emergency_waiting</name>
+		</location>
+		<location id="id31" x="-93" y="-76">
+			<name x="-170" y="-51">pediatrics_waiting</name>
+		</location>
+		<init ref="id24"/>
+		<transition id="id32">
+			<source ref="id31"/>
+			<target ref="id25"/>
+			<label kind="synchronisation" x="-59" y="-110">robot_deliver_pediatrics_done?</label>
+		</transition>
+		<transition id="id33">
+			<source ref="id30"/>
+			<target ref="id28"/>
+			<label kind="synchronisation" x="-85" y="-323">robot_deliver_emergency_done?</label>
+		</transition>
+		<transition id="id34">
+			<source ref="id27"/>
+			<target ref="id29"/>
+			<label kind="synchronisation" x="-51" y="-493">robot_deliver_icu_done?</label>
+		</transition>
+		<transition id="id35">
+			<source ref="id24"/>
+			<target ref="id31"/>
+			<label kind="guard" x="-357" y="-144">kits_delivered_in_travel &gt; empty &amp;&amp;
+sector_type == pediatrics</label>
+			<label kind="synchronisation" x="-306" y="-102">sending_kits?</label>
+		</transition>
+		<transition id="id36">
+			<source ref="id24"/>
+			<target ref="id30"/>
+			<label kind="guard" x="-331" y="-272">kits_delivered_in_travel &gt; empty &amp;&amp;
+sector_type == emergency</label>
+			<label kind="synchronisation" x="-323" y="-229">sending_kits?</label>
+		</transition>
+		<transition id="id37">
+			<source ref="id29"/>
+			<target ref="id26"/>
+			<label kind="guard" x="374" y="-357">elapsed_time &gt;= 
+time_to_receive_kit</label>
+			<label kind="synchronisation" x="391" y="-374">kit_received!</label>
+			<label kind="assignment" x="374" y="-314">served[id-1] = true</label>
+			<nail x="365" y="195"/>
+			<nail x="119" y="195"/>
+		</transition>
+		<transition id="id38">
+			<source ref="id28"/>
+			<target ref="id26"/>
+			<label kind="guard" x="178" y="-255">elapsed_time &gt;= 
+time_to_receive_kit</label>
+			<label kind="synchronisation" x="187" y="-280">kit_received!</label>
+			<label kind="assignment" x="178" y="-212">served[id-1] = true</label>
+			<nail x="246" y="136"/>
+		</transition>
+		<transition id="id39">
+			<source ref="id24"/>
+			<target ref="id27"/>
+			<label kind="guard" x="-484" y="-382">kits_delivered_in_travel &gt; empty &amp;&amp;
+sector_type == icu</label>
+			<label kind="synchronisation" x="-433" y="-340">sending_kits?</label>
+		</transition>
+		<transition id="id40">
+			<source ref="id26"/>
+			<target ref="id24"/>
+			<label kind="synchronisation" x="-306" y="59">station_to_idle?</label>
+			<label kind="assignment" x="-306" y="76">elapsed_time = 0,
+success[sector_type] = true</label>
+			<nail x="-433" y="136"/>
+		</transition>
+		<transition id="id41">
+			<source ref="id25"/>
+			<target ref="id26"/>
+			<label kind="guard" x="93" y="0">elapsed_time &gt;= 
+time_to_receive_kit</label>
+			<label kind="synchronisation" x="102" y="-17">kit_received!</label>
+			<label kind="assignment" x="93" y="42">served[id-1] = true</label>
+		</transition>
+	</template>
+	<template>
+		<name>Human_Validator</name>
+		<declaration>// Place local declarations here.
+clock elapsed_time;
+
+</declaration>
+		<location id="id42" x="-960" y="-442">
+			<name x="-1003" y="-476">idle</name>
+		</location>
+		<location id="id43" x="-629" y="-442">
+			<name x="-646" y="-485">validating</name>
+		</location>
+		<location id="id44" x="-629" y="-229">
+			<name x="-629" y="-212">complete</name>
+		</location>
+		<location id="id45" x="-799" y="-612">
+			<name x="-833" y="-654">notify_robot</name>
+		</location>
+		<init ref="id42"/>
+		<transition id="id46">
+			<source ref="id45"/>
+			<target ref="id42"/>
+			<label kind="synchronisation" x="-952" y="-544">robot_back_to_work!</label>
+			<label kind="assignment" x="-952" y="-527">elapsed_time = 0</label>
+		</transition>
+		<transition id="id47">
+			<source ref="id43"/>
+			<target ref="id45"/>
+			<label kind="guard" x="-833" y="-561">ticket_queue[current_sector] &gt; empty</label>
+			<label kind="synchronisation" x="-756" y="-544">kit_ready!</label>
+		</transition>
+		<transition id="id48">
+			<source ref="id44"/>
+			<target ref="id42"/>
+			<label kind="synchronisation" x="-1020" y="-340">validate_to_idle!</label>
+			<label kind="assignment" x="-1020" y="-323">elapsed_time = 0</label>
+			<nail x="-960" y="-230"/>
+		</transition>
+		<transition id="id49">
+			<source ref="id42"/>
+			<target ref="id43"/>
+			<label kind="synchronisation" x="-875" y="-467">kit_ready_to_validate?</label>
+		</transition>
+		<transition id="id50">
+			<source ref="id43"/>
+			<target ref="id44"/>
+			<label kind="guard" x="-697" y="-391">elapsed_time &gt;= 
+time_to_validate_kit &amp;&amp;
+ticket_queue[current_sector] == empty</label>
+			<label kind="synchronisation" x="-680" y="-331">kit_ready!</label>
+		</transition>
+	</template>
+	<template>
+		<name>Sector</name>
+		<parameter>int sector_type</parameter>
+		<declaration>// Place local declarations here.
+clock elapsed_time;
+
+void set_sector_tickets(){
+    current_sector = sector_type;
+    kit_map[sector_type] += remaining_kits_per_sector[sector_type]; 
+    kits_to_mount = kit_map[sector_type];
+    ticket_queue[sector_type] = kits_to_mount;
+}
+
+void get_total_tickets() {
+    total_tickets_in_queue = kit_map[0] + kit_map[1] + kit_map[2];
+}
+
+// TODO: preciso montar os kits restantes de outra iteração antes de qualquer coisa
+
+</declaration>
+		<location id="id51" x="-824" y="-144">
+			<name x="-909" y="-178">waiting_ticket</name>
+		</location>
+		<location id="id52" x="-442" y="-144">
+			<name x="-527" y="-187">generating_ticket_emergency</name>
+		</location>
+		<location id="id53" x="-68" y="-144">
+			<name x="-43" y="-153">send_ticket</name>
+		</location>
+		<location id="id54" x="-450" y="-357">
+			<name x="-509" y="-391">generating_ticket_icu</name>
+		</location>
+		<location id="id55" x="-442" y="51">
+			<name x="-519" y="68">generating_ticket_pediatrics</name>
+		</location>
+		<init ref="id51"/>
+		<transition id="id56">
+			<source ref="id53"/>
+			<target ref="id51"/>
+			<label kind="guard" x="-595" y="119">ticket_queue[sector_type] &gt;= empty</label>
+			<nail x="-59" y="144"/>
+			<nail x="-816" y="144"/>
+		</transition>
+		<transition id="id57">
+			<source ref="id55"/>
+			<target ref="id53"/>
+			<label kind="guard" x="-246" y="-51">elapsed_time &gt;= 
+time_to_send_ticket</label>
+			<label kind="synchronisation" x="-246" y="-68">robot_assign_task!</label>
+			<label kind="assignment" x="-246" y="-17">set_sector_tickets(),
+get_total_tickets(),
+generated_pediatrics_kits = true</label>
+			<nail x="-255" y="51"/>
+		</transition>
+		<transition id="id58">
+			<source ref="id54"/>
+			<target ref="id53"/>
+			<label kind="guard" x="-195" y="-340">elapsed_time &gt;= 
+time_to_send_ticket</label>
+			<label kind="synchronisation" x="-195" y="-357">robot_assign_task!</label>
+			<label kind="assignment" x="-195" y="-297">set_sector_tickets(),
+get_total_tickets(),
+generated_icu_kits = true</label>
+			<nail x="-229" y="-357"/>
+		</transition>
+		<transition id="id59">
+			<source ref="id51"/>
+			<target ref="id54"/>
+			<label kind="guard" x="-790" y="-416">elapsed_time &gt;=
+time_to_generate_ticket &amp;&amp; 
+sector_type == icu &amp;&amp; 
+arm_ready</label>
+			<label kind="synchronisation" x="-790" y="-433">generate_ticket!</label>
+			<label kind="assignment" x="-790" y="-340">elapsed_time = 0</label>
+			<nail x="-731" y="-357"/>
+		</transition>
+		<transition id="id60">
+			<source ref="id51"/>
+			<target ref="id55"/>
+			<label kind="guard" x="-765" y="-59">elapsed_time &gt;=
+time_to_generate_ticket &amp;&amp; 
+sector_type == pediatrics &amp;&amp;
+generated_emergency_kits == true &amp;&amp; 
+arm_ready</label>
+			<label kind="synchronisation" x="-765" y="-76">generate_ticket!</label>
+			<label kind="assignment" x="-765" y="34">elapsed_time = 0</label>
+			<nail x="-739" y="51"/>
+		</transition>
+		<transition id="id61">
+			<source ref="id52"/>
+			<target ref="id53"/>
+			<label kind="guard" x="-272" y="-187">elapsed_time &gt;= 
+time_to_send_ticket</label>
+			<label kind="synchronisation" x="-272" y="-212">robot_assign_task!</label>
+			<label kind="assignment" x="-272" y="-144">set_sector_tickets(),
+get_total_tickets(),
+generated_emergency_kits = true</label>
+			<nail x="-390" y="-144"/>
+		</transition>
+		<transition id="id62">
+			<source ref="id51"/>
+			<target ref="id52"/>
+			<label kind="guard" x="-765" y="-255">elapsed_time &gt;=
+time_to_generate_ticket &amp;&amp; 
+sector_type == emergency &amp;&amp; 
+generated_icu_kits == true &amp;&amp; 
+arm_ready</label>
+			<label kind="synchronisation" x="-765" y="-272">generate_ticket!</label>
+			<label kind="assignment" x="-765" y="-161">elapsed_time = 0</label>
+		</transition>
+	</template>
+	<template>
+		<name>Robot_Deliver</name>
+		<declaration>// Place local declarations here.
+clock elapsed_time;
+
+bool all_served() {
+    return served[icu] &amp;&amp; served[emergency] &amp;&amp; served[pediatrics];
+}
+
+void check_priority() {
+    int i;
+    for (i = 0; i &lt; humans; i++) {
+        if (delivery_ticket_queue[i] &gt; empty) {
+            delivery_priority = i;
+            return;
+        }
+    }
+    delivery_priority++;
+}</declaration>
+		<location id="id63" x="-1130" y="-323">
+			<name x="-1164" y="-357">idle</name>
+		</location>
+		<location id="id64" x="-960" y="-323">
+			<name x="-1011" y="-297">generating_path</name>
+		</location>
+		<location id="id65" x="-102" y="-153">
+			<name x="-51" y="-161">delivered_pediatrics</name>
+		</location>
+		<location id="id66" x="-731" y="-552">
+			<name x="-782" y="-595">loading_icu_kits</name>
+		</location>
+		<location id="id67" x="-731" y="-323">
+			<name x="-756" y="-272">working</name>
+		</location>
+		<location id="id68" x="-986" y="-102">
+			<name x="-1062" y="-85">loading_emergency_kits</name>
+		</location>
+		<location id="id69" x="-323" y="-323">
+			<name x="-383" y="-357">delivering</name>
+		</location>
+		<location id="id70" x="-459" y="-102">
+			<name x="-535" y="-85">loading_pediatrics_kits</name>
+		</location>
+		<location id="id71" x="-323" y="-34">
+			<name x="-314" y="-17">returned</name>
+		</location>
+		<location id="id72" x="51" y="-323">
+			<name x="17" y="-365">delivered_emergency</name>
+		</location>
+		<location id="id73" x="136" y="-518">
+			<name x="93" y="-561">delivered_icu</name>
+		</location>
+		<init ref="id63"/>
+		<transition id="id74">
+			<source ref="id73"/>
+			<target ref="id71"/>
+			<label kind="guard" x="93" y="-119">elapsed_time &gt;= 
+time_to_return</label>
+			<label kind="synchronisation" x="93" y="-136">kit_received?</label>
+			<nail x="144" y="85"/>
+			<nail x="-323" y="85"/>
+		</transition>
+		<transition id="id75">
+			<source ref="id72"/>
+			<target ref="id71"/>
+			<label kind="guard" x="-102" y="-34">elapsed_time &gt;= 
+time_to_return</label>
+			<label kind="synchronisation" x="-102" y="-51">kit_received?</label>
+			<nail x="51" y="-34"/>
+		</transition>
+		<transition id="id76">
+			<source ref="id69"/>
+			<target ref="id72"/>
+			<label kind="guard" x="-238" y="-365">delivery_priority == emergency</label>
+			<label kind="synchronisation" x="-238" y="-348">robot_deliver_emergency_done!</label>
+			<label kind="assignment" x="-238" y="-323">kits_delivered_in_travel = empty,
+elapsed_time = 0</label>
+		</transition>
+		<transition id="id77">
+			<source ref="id69"/>
+			<target ref="id73"/>
+			<label kind="guard" x="-153" y="-476">delivery_priority == icu</label>
+			<label kind="synchronisation" x="-153" y="-459">robot_deliver_icu_done!</label>
+			<label kind="assignment" x="-153" y="-442">kits_delivered_in_travel = empty,
+elapsed_time = 0</label>
+		</transition>
+		<transition id="id78">
+			<source ref="id71"/>
+			<target ref="id63"/>
+			<label kind="guard" x="-612" y="34">all_served()</label>
+			<label kind="synchronisation" x="-629" y="51">station_to_idle!</label>
+			<label kind="assignment" x="-629" y="68">elapsed_time = 0</label>
+			<nail x="-374" y="51"/>
+			<nail x="-1122" y="51"/>
+		</transition>
+		<transition id="id79">
+			<source ref="id71"/>
+			<target ref="id64"/>
+			<label kind="guard" x="-612" y="-51">!all_served()</label>
+			<label kind="assignment" x="-620" y="-34">elapsed_time = 0,
+check_priority()</label>
+			<nail x="-1088" y="-34"/>
+			<nail x="-1096" y="-263"/>
+		</transition>
+		<transition id="id80">
+			<source ref="id65"/>
+			<target ref="id71"/>
+			<label kind="guard" x="-229" y="-110">elapsed_time &gt;= 
+time_to_return</label>
+			<label kind="synchronisation" x="-229" y="-127">kit_received?</label>
+		</transition>
+		<transition id="id81">
+			<source ref="id70"/>
+			<target ref="id67"/>
+			<label kind="assignment" x="-527" y="-272">delivery_ticket_queue[emergency]--,
+kits_delivered_in_travel++,
+current_sector = emergency</label>
+			<nail x="-476" y="-221"/>
+		</transition>
+		<transition id="id82">
+			<source ref="id67"/>
+			<target ref="id70"/>
+			<label kind="guard" x="-722" y="-212">delivery_ticket_queue[emergency] &gt; empty &amp;&amp;
+kits_delivered_in_travel &lt; 
+max_kits_per_travel &amp;&amp;
+delivery_priority == emergency</label>
+		</transition>
+		<transition id="id83">
+			<source ref="id68"/>
+			<target ref="id67"/>
+			<label kind="assignment" x="-833" y="-119">delivery_ticket_queue[pediatrics]--,
+kits_delivered_in_travel++,
+current_sector = pediatrics</label>
+			<nail x="-807" y="-127"/>
+		</transition>
+		<transition id="id84">
+			<source ref="id67"/>
+			<target ref="id68"/>
+			<label kind="guard" x="-1037" y="-238">delivery_ticket_queue[pediatrics] &gt; empty &amp;&amp;
+kits_delivered_in_travel &lt; 
+max_kits_per_travel &amp;&amp;
+delivery_priority == pediatrics</label>
+		</transition>
+		<transition id="id85">
+			<source ref="id69"/>
+			<target ref="id65"/>
+			<label kind="guard" x="-255" y="-263">delivery_priority == pediatrics</label>
+			<label kind="synchronisation" x="-255" y="-246">robot_deliver_pediatrics_done!</label>
+			<label kind="assignment" x="-255" y="-229">kits_delivered_in_travel = empty,
+elapsed_time = 0</label>
+		</transition>
+		<transition id="id86">
+			<source ref="id67"/>
+			<target ref="id69"/>
+			<label kind="guard" x="-688" y="-348">kits_delivered_in_travel &gt; empty</label>
+			<label kind="synchronisation" x="-578" y="-323">sending_kits!</label>
+		</transition>
+		<transition id="id87">
+			<source ref="id66"/>
+			<target ref="id67"/>
+			<label kind="assignment" x="-671" y="-459">delivery_ticket_queue[icu]--,
+kits_delivered_in_travel++,
+current_sector = icu</label>
+			<nail x="-680" y="-433"/>
+			<nail x="-680" y="-433"/>
+		</transition>
+		<transition id="id88">
+			<source ref="id67"/>
+			<target ref="id66"/>
+			<label kind="guard" x="-952" y="-476">delivery_ticket_queue[icu] &gt; empty &amp;&amp;
+kits_delivered_in_travel &lt; 
+max_kits_per_travel &amp;&amp;
+delivery_priority == icu</label>
+		</transition>
+		<transition id="id89">
+			<source ref="id64"/>
+			<target ref="id67"/>
+			<label kind="guard" x="-943" y="-365">elapsed_time &gt;=
+time_to_generate_path</label>
+		</transition>
+		<transition id="id90">
+			<source ref="id63"/>
+			<target ref="id64"/>
+			<label kind="synchronisation" x="-1104" y="-349">kit_ready?</label>
+		</transition>
+	</template>
+	<system>//agents
+human_validator = Human_Validator();
+human_receiver_icu = Human_Receiver(1,0);
+human_receiver_emergency = Human_Receiver(2,1);
+human_receiver_pediatrics = Human_Receiver(3,2);
+robot_assembler = Robot_Assembler();
+robot_deliver = Robot_Deliver();
+sector_icu = Sector(0);
+sector_emergency = Sector(1);
+sector_pediatrics = Sector(2);
+
+system 
+human_validator,
+human_receiver_icu,
+human_receiver_emergency,
+human_receiver_pediatrics,
+robot_deliver,
+robot_assembler,
+sector_icu,
+sector_emergency,
+sector_pediatrics;
+</system>
+	<queries>
+		<query>
+			<formula>E&lt;&gt; sector_icu.generating_ticket
+
+</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-11-26 21:12:40 -0300">
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; sector_icu.send_ticket
+
+</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-11-26 21:12:42 -0300">
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; served[0] &amp;&amp; served[1] &amp;&amp; served[2]</formula>
+			<comment/>
+		</query>
+		<query>
+			<formula>A&lt;&gt; elapsed_time &gt; 0 &amp;&amp; (ticket_queue[0] == 0 &amp;&amp; ticket_queue[1] == 0 &amp;&amp; ticket_queue[2] == 0)</formula>
+			<comment/>
+			<result outcome="failure" type="quality" timestamp="2024-11-28 19:54:24 -0300">
+			</result>
+		</query>
+		<query>
+			<formula>E&lt;&gt; elapsed_time &gt; 0 &amp;&amp; (ticket_queue[0] == 0 &amp;&amp; ticket_queue[1] == 0 &amp;&amp; ticket_queue[2] == 0)</formula>
+			<comment/>
+			<result outcome="success" type="quality" timestamp="2024-11-28 19:54:17 -0300">
+			</result>
+		</query>
+	</queries>
+</nta>
