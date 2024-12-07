@@ -31,10 +31,10 @@ const int icu = 0;
 const int emergency = 1;
 const int pediatrics = 2;
 int current_sector;
-int kit_map[3] = {2,2,3};                  // kits to mount in each sector [0] icu, [1] emergency, [2] pediatrics.
+int kit_map[3] = {2,2,1};                  // kits to mount in each sector [0] icu, [1] emergency, [2] pediatrics.
 int delivery_priority = 0;                 // each sector has his own priority e.g. 0. icu, 1. emergency, 2. pediatrics
 
-int ticket_queue[3] = {-1,-1,-1};          //  initialize ticket_queue with values different than zero
+int ticket_queue[3] = {-1,-1,-1};             //  initialize ticket_queue with values different than zero
 int delivery_ticket_queue[3] = {0,0,0};    // queue used to deliver tickets on each sector
 int total_tickets_in_queue;                // sum of all kits to be mounted
 int num_tickets = 0;                       // number of kits in dispenser
@@ -56,8 +56,8 @@ const int time_to_return = 10;
 
 
 bool success[humans] = {false, false, false}; // check if robot delivery on each sector
-bool served[humans] = {false, false, false}; // check if humans received kits correctly
-bool arm_ready = true;                      // indicates when robot can mount a kit
+bool served[humans] = {false, false, false};  // check if humans received kits correctly
+bool arm_ready = true;                        // indicates when robot can mount a kit
 bool generated_icu_kits = false;
 bool generated_emergency_kits = false;
 bool generated_pediatrics_kits = false;
@@ -130,7 +130,6 @@ bool is_ticket_queue_empty() {
 		<transition id="id10">
 			<source ref="id6"/>
 			<target ref="id1"/>
-			<label kind="guard" x="-195" y="-34">ticket_queue[current_sector] &gt; empty</label>
 			<label kind="synchronisation" x="-153" y="-17">robot_back_to_work?</label>
 			<nail x="459" y="0"/>
 			<nail x="-348" y="8"/>
