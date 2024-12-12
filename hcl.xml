@@ -456,7 +456,7 @@ arm_ready</label>
 clock elapsed_time;
 
 bool all_served() {
-    return success[icu] &amp;&amp; success[emergency] &amp;&amp; success[pediatrics];
+    return (served[icu] &amp;&amp; served[emergency] &amp;&amp; served[pediatrics]) &amp;&amp; success[pediatrics] == true;
 }
 
 
@@ -472,12 +472,13 @@ void check_priority() {
 }
 
 void clean_vars(){
-    served[icu] = served[emergency] = served[pediatrics] = 0;
+    served[icu] = served[emergency] = served[pediatrics] = empty;
     ticket_queue[icu] = ticket_queue[emergency] = ticket_queue[pediatrics] = -1;
-    generated_icu_kits = generated_emergency_kits = generated_pediatrics_kits = 0;
-    success[icu] = success[emergency] = success[pediatrics] = 0;
-    current_sector = 0;
-    kits_to_mount = 0;
+    generated_icu_kits = generated_emergency_kits = generated_pediatrics_kits = empty;
+    success[icu] = success[emergency] = success[pediatrics] = empty;
+    current_sector = empty;
+    kits_to_mount = empty;
+    delivery_priority = empty;
 }</declaration>
 		<location id="id55" x="-1275" y="-323">
 			<name x="-1309" y="-357">idle</name>
@@ -587,7 +588,8 @@ clean_vars()</label>
 		<transition id="id76">
 			<source ref="id63"/>
 			<target ref="id56"/>
-			<label kind="guard" x="-595" y="25">!all_served()</label>
+			<label kind="guard" x="-595" y="8">!all_served() &amp;&amp;
+served[pediatrics] == false</label>
 			<label kind="assignment" x="-595" y="42">elapsed_time = 0,
 check_priority()</label>
 			<nail x="-1241" y="85"/>
