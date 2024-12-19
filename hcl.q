@@ -3,28 +3,44 @@
 /*
 
 */
-E<> sector_icu.generating_ticket\
-\*
+A[] not deadlock\
 
 
 /*
 
 */
-E<> sector_icu.send_ticket\
-\*
+E<> served[icu] && served[emergency] && served[pediatrics]
+
+/*
+
+*/
+E<> elapsed_time > 0 && (ticket_queue[icu] == empty && ticket_queue[emergency] == empty && ticket_queue[pediatrics] == empty)
+
+/*
+
+*/
+A[] forall(i : int[0,2]) delivery_ticket_queue[i] >= empty\
 
 
 /*
 
 */
-E<> served[0] && served[1] && served[2]
+E<> forall(i : int[0,2]) delivery_ticket_queue[i] == empty
 
 /*
 
 */
-A<> elapsed_time > 0 && (ticket_queue[0] == 0 && ticket_queue[1] == 0 && ticket_queue[2] == 0)
+A[] delivery_ticket_queue[icu] > 0 imply delivery_priority == icu\
+
 
 /*
 
 */
-E<> elapsed_time > 0 && (ticket_queue[0] == 0 && ticket_queue[1] == 0 && ticket_queue[2] == 0)
+A[] num_tickets <= max_num_tickets\
+
+
+/*
+
+*/
+A[] forall(i : int[0,2]) (delivery_priority == i && delivery_ticket_queue[i] > 0) imply time_to_deliver_kit <= 10\
+
