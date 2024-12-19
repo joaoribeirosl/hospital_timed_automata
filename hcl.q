@@ -10,7 +10,6 @@ A[] not deadlock\
 
 */
 E<> served[icu] && served[emergency] && served[pediatrics]
-E<> served[icu] && served[emergency] && served[pediatrics]
 
 /*
 
