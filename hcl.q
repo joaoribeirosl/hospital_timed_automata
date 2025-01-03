@@ -36,7 +36,7 @@ A[] delivery_ticket_queue[icu] > 0 imply delivery_priority == icu\
 /*
 
 */
-A[] num_tickets <= max_num_tickets\
+A[] num_kits <= max_num_kits\
 
 
 /*
